@@ -110,39 +110,35 @@ def main():
     except ldap.LDAPError as e:
         print(f"Failed to search schema container: {e}", file=sys.stderr)
         sys.exit(1)
-
-    # Determine existing indices
-    idx_pattern = re.compile(r'\{(\d+)\}(.+)')
+  
+    # Determine existing indices and detect if schema snippet already exists
+    idx_re = re.compile(r'\{(\d+)\}([^,]+)')
     indices = []
     existing_idx = None
     for dn, _ in entries:
-        m = idx_pattern.search(dn)
-        if m:
-            idx = int(m.group(1))
-            name = m.group(2)
-            indices.append(idx)
-            if name == args.schema_name:
-                existing_idx = idx
+        m = idx_re.search(dn)
+        if not m:
+            continue
+        idx = int(m.group(1))
+        name = m.group(2)  # snippet name before the comma
+        indices.append(idx)
+        if name == args.schema_name:
+            existing_idx = idx
 
-    # Compute target index
+    # Compute which index to use
     if existing_idx is not None:
         idx = existing_idx
-        print(f"Using existing schema index {{idx}} for '{args.schema_name}'")
+        print(f"✔️  Using existing schema snippet {{{idx}}}{args.schema_name}")
     else:
-        idx = (max(indices) + 1) if indices else 0
+        idx = max(indices) + 1 if indices else 0
         prefix = f'{{{idx}}}'
         new_dn = f"cn={prefix}{args.schema_name},{base_dn}"
         entry_attrs = {
             'objectClass': [b'top', b'olcSchemaConfig'],
             'cn': [f"{prefix}{args.schema_name}".encode()],
         }
-        ldif = modlist.addModlist(entry_attrs)
-        try:
-            conn.add_s(new_dn, ldif)
-            print(f"Created schema entry {new_dn}")
-        except ldap.LDAPError as e:
-            print(f"Failed to create schema entry: {e}", file=sys.stderr)
-            sys.exit(1)
+        conn.add_s(new_dn, ldap.modlist.addModlist(entry_attrs))
+        print(f"✅ Created new schema snippet: {new_dn}")
 
     # Final DN for modifications
     prefix = f'{{{idx}}}'
@@ -155,12 +151,17 @@ def main():
             existing = result[0][1].get('olcAttributeTypes', [])
             encoded = atdef.encode()
             if encoded in existing:
-                print(f"AttributeType already present: {atdef}")
+                print(f"ℹ️  AttributeType already present: {atdef}")
             else:
                 conn.modify_s(schema_dn, [(ldap.MOD_ADD, 'olcAttributeTypes', [encoded])])
-                print(f"Added AttributeType: {atdef}")
+                print(f"➕ Added AttributeType: {atdef}")
         except ldap.LDAPError as e:
-            print(f"Error adding AttributeType '{atdef}': {e}", file=sys.stderr)
+            info = getattr(e, 'info', '') or str(e)
+            if 'Duplicate attributeType' in info:
+                print(f"ℹ️  Duplicate AttributeType skipped: {atdef}")
+            else:
+                print(f"❌  Error adding AttributeType '{atdef}': {e}", file=sys.stderr)
+                sys.exit(1)
 
     # Add/update ObjectClasses
     for ocdef in args.object_class:
@@ -169,12 +170,17 @@ def main():
             existing = result[0][1].get('olcObjectClasses', [])
             encoded = ocdef.encode()
             if encoded in existing:
-                print(f"ObjectClass already present: {ocdef}")
+                print(f"ℹ️  ObjectClass already present: {ocdef}")
             else:
                 conn.modify_s(schema_dn, [(ldap.MOD_ADD, 'olcObjectClasses', [encoded])])
-                print(f"Added ObjectClass: {ocdef}")
+                print(f"➕ Added ObjectClass: {ocdef}")
         except ldap.LDAPError as e:
-            print(f"Error adding ObjectClass '{ocdef}': {e}", file=sys.stderr)
+            info = getattr(e, 'info', '') or str(e)
+            if 'Duplicate objectClass' in info:
+                print(f"ℹ️  Duplicate ObjectClass skipped: {ocdef}")
+            else:
+                print(f"❌  Error adding ObjectClass '{ocdef}': {e}", file=sys.stderr)
+                sys.exit(1)
 
     conn.unbind_s()
 
