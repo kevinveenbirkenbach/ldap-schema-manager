@@ -145,42 +145,48 @@ def main():
     schema_dn = f"cn={prefix}{args.schema_name},{base_dn}"
 
     # Add/update AttributeTypes
+    # Add/update AttributeTypes
     for atdef in args.attribute_type:
+        encoded = atdef.encode()
         try:
-            result = conn.search_s(schema_dn, ldap.SCOPE_BASE, attrlist=['olcAttributeTypes'])
+            result = conn.search_s(schema_dn, ldap.SCOPE_BASE,
+                                   attrlist=['olcAttributeTypes'])
             existing = result[0][1].get('olcAttributeTypes', [])
-            encoded = atdef.encode()
             if encoded in existing:
-                print(f"ℹ️  AttributeType already present: {atdef}")
+                print(f"ℹ️  AttributeType already exists, replacing: {atdef}")
+                # Replace the existing value
+                conn.modify_s(schema_dn, [
+                    (ldap.MOD_REPLACE, 'olcAttributeTypes', [encoded])
+                ])
+                print(f"🔄 Replaced AttributeType: {atdef}")
             else:
-                conn.modify_s(schema_dn, [(ldap.MOD_ADD, 'olcAttributeTypes', [encoded])])
+                conn.modify_s(schema_dn, [
+                    (ldap.MOD_ADD, 'olcAttributeTypes', [encoded])
+                ])
                 print(f"➕ Added AttributeType: {atdef}")
         except ldap.LDAPError as e:
-            info = getattr(e, 'info', '') or str(e)
-            if 'Duplicate attributeType' in info:
-                print(f"ℹ️  Duplicate AttributeType skipped: {atdef}")
-            else:
-                print(f"❌  Error adding AttributeType '{atdef}': {e}", file=sys.stderr)
-                sys.exit(1)
+            print(f"❌  LDAP error for AttributeType '{atdef}': {e}", file=sys.stderr)
 
     # Add/update ObjectClasses
     for ocdef in args.object_class:
+        encoded = ocdef.encode()
         try:
-            result = conn.search_s(schema_dn, ldap.SCOPE_BASE, attrlist=['olcObjectClasses'])
+            result = conn.search_s(schema_dn, ldap.SCOPE_BASE,
+                                   attrlist=['olcObjectClasses'])
             existing = result[0][1].get('olcObjectClasses', [])
-            encoded = ocdef.encode()
             if encoded in existing:
-                print(f"ℹ️  ObjectClass already present: {ocdef}")
+                print(f"ℹ️  ObjectClass already exists, replacing: {ocdef}")
+                conn.modify_s(schema_dn, [
+                    (ldap.MOD_REPLACE, 'olcObjectClasses', [encoded])
+                ])
+                print(f"🔄 Replaced ObjectClass: {ocdef}")
             else:
-                conn.modify_s(schema_dn, [(ldap.MOD_ADD, 'olcObjectClasses', [encoded])])
+                conn.modify_s(schema_dn, [
+                    (ldap.MOD_ADD, 'olcObjectClasses', [encoded])
+                ])
                 print(f"➕ Added ObjectClass: {ocdef}")
         except ldap.LDAPError as e:
-            info = getattr(e, 'info', '') or str(e)
-            if 'Duplicate objectClass' in info:
-                print(f"ℹ️  Duplicate ObjectClass skipped: {ocdef}")
-            else:
-                print(f"❌  Error adding ObjectClass '{ocdef}': {e}", file=sys.stderr)
-                sys.exit(1)
+            print(f"❌  LDAP error for ObjectClass '{ocdef}': {e}", file=sys.stderr)
 
     conn.unbind_s()
 
