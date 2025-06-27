@@ -19,6 +19,13 @@ import argparse
 import re
 import sys
 
+def normalize(def_str: bytes) -> bytes:
+    """
+    Collapse all whitespace (Spaces, Newlines, Tabs) to single spaces,
+    strip leading/trailing whitespace, for reliable byte-wise comparisons.
+    """
+    return re.sub(rb'\s+', b' ', def_str.strip())
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create or update OpenLDAP schema entries under cn=config'
@@ -145,27 +152,32 @@ def main():
     schema_dn = f"cn={prefix}{args.schema_name},{base_dn}"
 
     # Add/update AttributeTypes
-    # Add/update AttributeTypes
     for atdef in args.attribute_type:
         encoded = atdef.encode()
+
         try:
             result = conn.search_s(schema_dn, ldap.SCOPE_BASE,
                                    attrlist=['olcAttributeTypes'])
             existing = result[0][1].get('olcAttributeTypes', [])
-            if encoded in existing:
-                print(f"ℹ️  AttributeType already exists, replacing: {atdef}")
-                # Replace the existing value
+
+            norm_existing = [normalize(v) for v in existing]
+            norm_encoded  = normalize(encoded)
+
+            if norm_encoded in norm_existing:
+                print(f"ℹ️  AttributeType exists → REPLACE: {atdef}")
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_REPLACE, 'olcAttributeTypes', [encoded])
                 ])
                 print(f"🔄 Replaced AttributeType: {atdef}")
             else:
+                print(f"➕ AttributeType fehlt → ADD: {atdef}")
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_ADD, 'olcAttributeTypes', [encoded])
                 ])
                 print(f"➕ Added AttributeType: {atdef}")
+
         except ldap.LDAPError as e:
-            print(f"❌  LDAP error for AttributeType '{atdef}': {e}", file=sys.stderr)
+            print(f"❌ LDAP error for AttributeType '{atdef}': {e}", file=sys.stderr)
             sys.exit(1)
 
     # Add/update ObjectClasses
