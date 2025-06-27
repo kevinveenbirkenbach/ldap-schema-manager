@@ -163,18 +163,32 @@ def main():
             norm_existing = [normalize(v) for v in existing]
             norm_encoded  = normalize(encoded)
 
+            # Extract OID from definition (assumes it is the first word in parentheses)
+            def extract_oid(ldif: str) -> str:
+                return ldif.split()[0].strip('(')
+
+            oid = extract_oid(atdef)
+
+            # Normalize existing
             if norm_encoded in norm_existing:
                 print(f"ℹ️  AttributeType exists → REPLACE: {atdef}")
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_REPLACE, 'olcAttributeTypes', [encoded])
                 ])
                 print(f"🔄 Replaced AttributeType: {atdef}")
+            elif any(oid in entry.decode() for entry in existing):
+                print(f"⚠️  AttributeType with same OID ({oid}) exists → REPLACE: {atdef}")
+                conn.modify_s(schema_dn, [
+                    (ldap.MOD_REPLACE, 'olcAttributeTypes', [encoded])
+                ])
+                print(f"🔄 Replaced AttributeType (OID match): {atdef}")
             else:
                 print(f"➕ AttributeType fehlt → ADD: {atdef}")
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_ADD, 'olcAttributeTypes', [encoded])
                 ])
                 print(f"➕ Added AttributeType: {atdef}")
+
 
         except ldap.LDAPError as e:
             print(f"❌ LDAP error for AttributeType '{atdef}': {e}", file=sys.stderr)
