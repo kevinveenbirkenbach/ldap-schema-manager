@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import main as manage_schema
+import sys
 
 class TestManageSchema(unittest.TestCase):
 
@@ -52,6 +53,21 @@ class TestManageSchema(unittest.TestCase):
         mock_conn.modify_s.assert_called_once_with(
             dn, [(0, 'olcObjectClasses', [encoded])]
         )
+
+        # Test no double add
+        mock_conn.modify_s.reset_mock()
+        mock_conn.search_s.return_value = [("cn={0}nextcloud,cn=schema,cn=config", {'olcObjectClasses': [encoded]})]
+        with patch.object(sys, 'argv', [
+            'manage_schema.py',
+            '-s', 'ldap://localhost',
+            '-D', 'cn=admin,dc=example,dc=org',
+            '-W', 'secret',
+            '-n', 'nextcloud',
+            '-c', ocdef
+        ]):
+            manage_schema.main()
+        mock_conn.modify_s.assert_not_called()
+
 
     def test_extract_oid_from_definition(self):
         ldif = "( 1.3.6.1.4.1.99999.1 NAME 'example' DESC 'something' )"

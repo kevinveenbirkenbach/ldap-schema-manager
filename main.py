@@ -198,20 +198,23 @@ def main():
         encoded = ocdef.encode()
         try:
             result = conn.search_s(schema_dn, ldap.SCOPE_BASE,
-                                   attrlist=['olcObjectClasses'])
+                                attrlist=['olcObjectClasses'])
             existing = result[0][1].get('olcObjectClasses', [])
-            if encoded in existing:
-                print(f"ℹ️  ObjectClass already exists, replacing (DELETE + ADD): {ocdef}")
-                mods = [
-                (ldap.MOD_DELETE, 'olcObjectClasses', [encoded]),
-                (ldap.MOD_ADD,    'olcObjectClasses', [encoded])
-                ]
-                try:
-                    conn.modify_s(schema_dn, mods)
-                    print(f"🔄 Replaced ObjectClass: {ocdef}")
-                except ldap.LDAPError as e:
-                    print(f"❌ LDAP error replacing ObjectClass '{ocdef}': {e}")
-                    sys.exit(2)
+            norm_existing = [normalize(v) for v in existing]
+            norm_encoded = normalize(encoded)
+
+            if norm_encoded in norm_existing:
+                print(f"✅ ObjectClass already up to date: {ocdef}")
+                continue
+
+            elif any(extract_oid(oc.decode()) == extract_oid(ocdef) for oc in existing):
+                print(f"⚠️ ObjectClass with same OID exists, replacing...")
+                to_delete = [oc for oc in existing if extract_oid(oc.decode()) == extract_oid(ocdef)]
+                for oc in to_delete:
+                    conn.modify_s(schema_dn, [(ldap.MOD_DELETE, 'olcObjectClasses', [oc])])
+                conn.modify_s(schema_dn, [(ldap.MOD_ADD, 'olcObjectClasses', [encoded])])
+                print(f"🔄 Replaced ObjectClass: {ocdef}")
+
             else:
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_ADD, 'olcObjectClasses', [encoded])
@@ -220,6 +223,7 @@ def main():
         except ldap.LDAPError as e:
             print(f"❌  LDAP error for ObjectClass '{ocdef}': {e}", file=sys.stderr)
             sys.exit(3)
+
 
     conn.unbind_s()
 
