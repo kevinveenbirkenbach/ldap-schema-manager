@@ -26,6 +26,10 @@ def normalize(def_str: bytes) -> bytes:
     """
     return re.sub(rb'\s+', b' ', def_str.strip())
 
+def extract_oid(ldif: str) -> str:
+    match = re.search(r'\(\s*([\d\.]+)', ldif)
+    return match.group(1) if match else ''
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create or update OpenLDAP schema entries under cn=config'
@@ -162,11 +166,6 @@ def main():
 
             norm_existing = [normalize(v) for v in existing]
             norm_encoded  = normalize(encoded)
-
-            # Extract OID from definition (assumes it is the first word in parentheses)
-            def extract_oid(ldif: str) -> str:
-                return ldif.split()[0].strip('(')
-
             oid = extract_oid(atdef)
 
             # Normalize existing
