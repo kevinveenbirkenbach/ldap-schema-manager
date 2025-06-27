@@ -166,6 +166,7 @@ def main():
                 print(f"➕ Added AttributeType: {atdef}")
         except ldap.LDAPError as e:
             print(f"❌  LDAP error for AttributeType '{atdef}': {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Add/update ObjectClasses
     for ocdef in args.object_class:
@@ -175,11 +176,17 @@ def main():
                                    attrlist=['olcObjectClasses'])
             existing = result[0][1].get('olcObjectClasses', [])
             if encoded in existing:
-                print(f"ℹ️  ObjectClass already exists, replacing: {ocdef}")
-                conn.modify_s(schema_dn, [
-                    (ldap.MOD_REPLACE, 'olcObjectClasses', [encoded])
-                ])
-                print(f"🔄 Replaced ObjectClass: {ocdef}")
+                print(f"ℹ️  ObjectClass already exists, replacing (DELETE + ADD): {ocdef}")
+                mods = [
+                (ldap.MOD_DELETE, 'olcObjectClasses', [encoded]),
+                (ldap.MOD_ADD,    'olcObjectClasses', [encoded])
+                ]
+                try:
+                    conn.modify_s(schema_dn, mods)
+                    print(f"🔄 Replaced ObjectClass: {ocdef}")
+                except ldap.LDAPError as e:
+                    print(f"❌ LDAP error replacing ObjectClass '{ocdef}': {e}")
+                    sys.exit(2)
             else:
                 conn.modify_s(schema_dn, [
                     (ldap.MOD_ADD, 'olcObjectClasses', [encoded])
@@ -187,6 +194,7 @@ def main():
                 print(f"➕ Added ObjectClass: {ocdef}")
         except ldap.LDAPError as e:
             print(f"❌  LDAP error for ObjectClass '{ocdef}': {e}", file=sys.stderr)
+            sys.exit(3)
 
     conn.unbind_s()
 
