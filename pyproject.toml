@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ldapsm"
-version = "0.1.0"
+version = "1.0.0"
 description = "CLI tool to manage OpenLDAP schema snippets under cn=config"
 readme = "README.md"
 requires-python = ">=3.9"
