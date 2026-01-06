@@ -1,0 +1,41 @@
+name: CI - tests
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Unit tests (make test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies for python-ldap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc \
+            python3-dev \
+            libldap2-dev \
+            libsasl2-dev \
+            libssl-dev
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        run: |
+          make test

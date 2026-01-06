@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ldapsm"
+version = "0.1.0"
+description = "CLI tool to manage OpenLDAP schema snippets under cn=config"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+
+authors = [
+  { name = "Kevin Veen-Birkenbach" }
+]
+
+dependencies = [
+  "python-ldap>=3.4",
+]
+
+[project.scripts]
+ldapsm = "ldapsm.__main__:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
