@@ -1,15 +1,31 @@
 # LDAP Schema Manager 🛠️
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-blue?logo=github)](https://github.com/sponsors/kevinveenbirkenbach) [![Patreon](https://img.shields.io/badge/Support-Patreon-orange?logo=patreon)](https://www.patreon.com/c/kevinveenbirkenbach) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20Coffee-Funding-yellow?logo=buymeacoffee)](https://buymeacoffee.com/kevinveenbirkenbach) [![PayPal](https://img.shields.io/badge/Donate-PayPal-blue?logo=paypal)](https://s.veen.world/paypaldonate)
 
-
 A Python-based CLI tool for managing OpenLDAP schema snippets under `cn=config`, allowing you to create or update schema entries—including custom `olcAttributeTypes` and `olcObjectClasses`—via LDAPI.
 
-## 🚀 Installation
-
-You can install **ldapsm** easily using [Kevin's package manager](https://github.com/kevinveenbirkenbach/package-manager):
+## 🚀 Installation (PyPI)
 
 ```bash
-pkgmgr install ldapsm
+python3 -m pip install --upgrade pip
+python3 -m pip install ldapsm
+```
+
+### System dependencies (required for python-ldap)
+
+`python-ldap` requires OpenLDAP development headers and SASL/SSL libraries.
+
+Debian / Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+  gcc python3-dev libldap2-dev libsasl2-dev libssl-dev
+```
+
+Arch Linux:
+
+```bash
+sudo pacman -S --needed gcc openldap
 ```
 
 ## 📝 Usage
@@ -19,8 +35,6 @@ After installation, run:
 ```bash
 ldapsm --help
 ```
-
-to view all available commands and options.
 
 ### Example
 
@@ -41,6 +55,7 @@ For detailed usage and options, run:
 ```bash
 ldapsm --help
 ```
+
 
 ## 🛡️ Contributing
 
