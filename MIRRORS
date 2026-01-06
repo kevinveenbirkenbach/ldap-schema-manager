@@ -1,0 +1,4 @@
+git@github.com:kevinveenbirkenbach/ldap-schema-manager.git
+ssh://git@git.veen.world:2201/kevinveenbirkenbach/ldapsm.git
+ssh://git@code.infinito.nexus:2201/kevinveenbirkenbach/ldapsm.git
+https://pypi.org/project/ldapsm/
