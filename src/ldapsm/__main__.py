@@ -14,7 +14,6 @@ Usage example:
 """
 
 import ldap
-import ldap.modlist as modlist
 import argparse
 import re
 import sys
@@ -208,7 +207,7 @@ def main():
                 continue
 
             elif any(extract_oid(oc.decode()) == extract_oid(ocdef) for oc in existing):
-                print(f"⚠️ ObjectClass with same OID exists, replacing...")
+                print("⚠️ ObjectClass with same OID exists, replacing...")
                 to_delete = [oc for oc in existing if extract_oid(oc.decode()) == extract_oid(ocdef)]
                 for oc in to_delete:
                     conn.modify_s(schema_dn, [(ldap.MOD_DELETE, 'olcObjectClasses', [oc])])
